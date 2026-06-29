@@ -9,7 +9,7 @@ Fast, browser-based real-time Turup for 4 players. Rooms, players, hands, bids, 
 - Framer Motion
 - Zustand
 - Express custom server for local/full Node hosting
-- Vercel Function WebSocket endpoint for Vercel hosting
+- Vercel Node server capture for Vercel hosting
 - Socket.IO
 - No database, ORM, Redis, file storage, auth provider, or persistence layer
 
@@ -109,7 +109,7 @@ The server is authoritative. Clients only send intended actions and render room 
 - `app/` Next.js app shell and global styles
 - `components/` lobby, table, cards, score, and chat UI
 - `game/` pure card, rule, and scoring modules
-- `api/` Vercel Function WebSocket entry point
+- `server.cjs` Vercel Node server entry point
 - `server/` Socket.IO handlers, local Express server, room store, serialization, and game transitions
 - `socket/` client Socket.IO store
 - `types/` shared TypeScript contracts
@@ -122,7 +122,7 @@ The server is authoritative. Clients only send intended actions and render room 
 The app can be deployed as a single Vercel project:
 
 - Next.js serves the frontend.
-- `api/socket-io.mjs` hosts Socket.IO as a Vercel Function WebSocket endpoint.
+- `server.cjs` starts the compiled custom Next + Socket.IO server.
 - The browser connects to `/api/socket-io` on the same Vercel domain by default.
 
 Vercel environment variables:
@@ -135,13 +135,13 @@ SOCKET_CORS_ORIGIN=https://turup-game.vercel.app
 
 Leave `NEXT_PUBLIC_SOCKET_URL` empty for Vercel-only deployment. Set it only if you intentionally point the frontend at a different socket host.
 
-Vercel WebSockets are currently served through Functions. If the project dashboard requires it, enable Fluid Compute/WebSockets for the deployment.
+Vercel WebSockets are served through Fluid Compute. `vercel.json` enables Fluid Compute for this project.
 
 ### Important In-Memory Limit
 
 Rooms, reconnect state, scores, and matches still live only in server memory. A redeploy, function restart, cold start replacement, or scaled multi-instance runtime can clear rooms because this project intentionally has no database or Redis adapter.
 
-`vercel.json` sets the socket function duration to 300 seconds, which is the safe Hobby-plan maximum. If your Vercel plan supports longer durations, raise `functions["api/socket-io.mjs"].maxDuration` for longer uninterrupted rooms.
+`vercel.json` sets the server duration to 300 seconds, which is the safe Hobby-plan maximum. If your Vercel plan supports longer durations, raise `functions["server.cjs"].maxDuration` for longer uninterrupted rooms.
 
 For the most reliable long-running rooms, use one persistent Node process:
 
