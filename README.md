@@ -9,8 +9,7 @@ Fast, browser-based real-time Turup for 4 players. Rooms, players, hands, bids, 
 - Framer Motion
 - Zustand
 - Express custom server for local/full Node hosting
-- Vercel Node server capture for Vercel hosting
-- Socket.IO
+- Native WebSocket realtime transport
 - No database, ORM, Redis, file storage, auth provider, or persistence layer
 
 ## Run Locally
@@ -109,9 +108,9 @@ The server is authoritative. Clients only send intended actions and render room 
 - `app/` Next.js app shell and global styles
 - `components/` lobby, table, cards, score, and chat UI
 - `game/` pure card, rule, and scoring modules
-- `server.cjs` Vercel Node server entry point
-- `server/` Socket.IO handlers, local Express server, room store, serialization, and game transitions
-- `socket/` client Socket.IO store
+- `app/api/socket-io/` Vercel WebSocket upgrade route
+- `server/` realtime adapter, local Express server, room store, serialization, and game transitions
+- `socket/` client WebSocket store
 - `types/` shared TypeScript contracts
 - `utils/` shared utility helpers
 
@@ -122,7 +121,7 @@ The server is authoritative. Clients only send intended actions and render room 
 The app can be deployed as a single Vercel project:
 
 - Next.js serves the frontend.
-- `server.cjs` starts the compiled custom Next + Socket.IO server.
+- `app/api/socket-io/route.ts` upgrades native WebSocket connections on Vercel.
 - The browser connects to `/api/socket-io` on the same Vercel domain by default.
 
 Vercel environment variables:

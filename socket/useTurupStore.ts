@@ -1,11 +1,11 @@
 "use client";
 
 import { create } from "zustand";
-import { io, type Socket } from "socket.io-client";
+import { RealtimeClientSocket } from "./realtimeClient";
 import type { RoomSnapshot, Suit } from "../types/game";
 import type { ClientToServerEvents, ServerToClientEvents } from "../types/socket";
 
-type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+type ClientSocket = RealtimeClientSocket;
 type ConnectionStatus = "connecting" | "connected" | "offline";
 
 type StoredRoomSession = {
@@ -70,12 +70,7 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
     }
 
     set({ connectionStatus: "connecting" });
-    const socket: ClientSocket = io(socketServerUrl, {
-      path: socketPath,
-      addTrailingSlash: false,
-      transports: ["websocket"],
-      autoConnect: true
-    });
+    const socket: ClientSocket = new RealtimeClientSocket(socketServerUrl, { path: socketPath });
 
     let reconnectingFromStorage = false;
 
