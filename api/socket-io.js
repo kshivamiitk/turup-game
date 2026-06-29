@@ -8,9 +8,12 @@ const publicBaseUrl =
 const corsOrigins = parseCorsOrigins(
   process.env.SOCKET_CORS_ORIGIN || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || vercelUrl
 );
+const socketPath = process.env.SOCKET_IO_PATH || process.env.NEXT_PUBLIC_SOCKET_PATH || "/api/socket-io";
 
 const server = createServer();
 const io = new Server(server, {
+  path: socketPath,
+  addTrailingSlash: false,
   pingInterval: 10_000,
   pingTimeout: 20_000,
   transports: ["websocket"],

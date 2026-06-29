@@ -123,13 +123,13 @@ The app can be deployed as a single Vercel project:
 
 - Next.js serves the frontend.
 - `api/socket-io.js` hosts Socket.IO as a Vercel Function WebSocket endpoint.
-- The browser connects to `/api/socket-io/socket.io` on the same Vercel domain by default.
+- The browser connects to `/api/socket-io` on the same Vercel domain by default.
 
 Vercel environment variables:
 
 ```bash
 NEXT_PUBLIC_APP_URL=https://turup-game.vercel.app
-NEXT_PUBLIC_SOCKET_PATH=/api/socket-io/socket.io
+NEXT_PUBLIC_SOCKET_PATH=/api/socket-io
 SOCKET_CORS_ORIGIN=https://turup-game.vercel.app
 ```
 

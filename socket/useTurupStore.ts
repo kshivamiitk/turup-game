@@ -56,7 +56,7 @@ const snapshotEvents: Array<keyof ServerToClientEvents> = [
 
 const roomSessionKey = "turup.currentRoom";
 const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || undefined;
-const socketPath = process.env.NEXT_PUBLIC_SOCKET_PATH || "/api/socket-io/socket.io";
+const socketPath = process.env.NEXT_PUBLIC_SOCKET_PATH || "/api/socket-io";
 
 export const useTurupStore = create<TurupStore>((set, get) => ({
   socket: null,
