@@ -15,6 +15,7 @@ const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 const publicBaseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? `http://localhost:${port}`;
+const corsOrigins = parseCorsOrigins(process.env.SOCKET_CORS_ORIGIN ?? process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL);
 
 void app.prepare().then(() => {
   const expressApp = express();
@@ -23,7 +24,7 @@ void app.prepare().then(() => {
     pingInterval: 10_000,
     pingTimeout: 20_000,
     cors: {
-      origin: "*"
+      origin: corsOrigins
     }
   });
 
@@ -37,3 +38,16 @@ void app.prepare().then(() => {
     console.log(`TURUP is running on ${publicBaseUrl}`);
   });
 });
+
+function parseCorsOrigins(value: string | undefined): string | string[] {
+  if (!value) {
+    return "*";
+  }
+
+  const origins = value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return origins.length <= 1 ? origins[0] ?? "*" : origins;
+}

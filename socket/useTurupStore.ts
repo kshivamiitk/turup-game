@@ -55,6 +55,7 @@ const snapshotEvents: Array<keyof ServerToClientEvents> = [
 ];
 
 const roomSessionKey = "turup.currentRoom";
+const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || undefined;
 
 export const useTurupStore = create<TurupStore>((set, get) => ({
   socket: null,
@@ -68,7 +69,7 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
     }
 
     set({ connectionStatus: "connecting" });
-    const socket: ClientSocket = io({
+    const socket: ClientSocket = io(socketServerUrl, {
       transports: ["websocket", "polling"],
       autoConnect: true
     });
@@ -96,7 +97,9 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
       }
     });
     socket.on("disconnect", () => set({ connectionStatus: "offline" }));
-    socket.on("connect_error", () => set({ connectionStatus: "offline", error: "Connection failed." }));
+    socket.on("connect_error", () =>
+      set({ connectionStatus: "offline", error: "Realtime server unavailable." })
+    );
     socket.on("error_message", (payload) => {
       if (reconnectingFromStorage) {
         reconnectingFromStorage = false;
