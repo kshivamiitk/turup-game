@@ -122,7 +122,7 @@ The server is authoritative. Clients only send intended actions and render room 
 The app can be deployed as a single Vercel project:
 
 - Next.js serves the frontend.
-- `api/socket-io.js` hosts Socket.IO as a Vercel Function WebSocket endpoint.
+- `api/socket-io.mjs` hosts Socket.IO as a Vercel Function WebSocket endpoint.
 - The browser connects to `/api/socket-io` on the same Vercel domain by default.
 
 Vercel environment variables:
@@ -141,7 +141,7 @@ Vercel WebSockets are currently served through Functions. If the project dashboa
 
 Rooms, reconnect state, scores, and matches still live only in server memory. A redeploy, function restart, cold start replacement, or scaled multi-instance runtime can clear rooms because this project intentionally has no database or Redis adapter.
 
-`vercel.json` sets the socket function duration to 300 seconds, which is the safe Hobby-plan maximum. If your Vercel plan supports longer durations, raise `functions["api/socket-io.js"].maxDuration` for longer uninterrupted rooms.
+`vercel.json` sets the socket function duration to 300 seconds, which is the safe Hobby-plan maximum. If your Vercel plan supports longer durations, raise `functions["api/socket-io.mjs"].maxDuration` for longer uninterrupted rooms.
 
 For the most reliable long-running rooms, use one persistent Node process:
 

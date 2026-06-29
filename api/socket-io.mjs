@@ -1,6 +1,9 @@
-const { createServer } = require("node:http");
-const { Server } = require("socket.io");
-const { registerSocketHandlers } = require("../dist/server/socketHandlers");
+import { createServer } from "node:http";
+import { createRequire } from "node:module";
+import { Server } from "socket.io";
+
+const require = createRequire(import.meta.url);
+const { registerSocketHandlers } = require("../dist/server/socketHandlers.js");
 
 const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
 const publicBaseUrl =
@@ -24,7 +27,7 @@ const io = new Server(server, {
 
 registerSocketHandlers(io, publicBaseUrl);
 
-module.exports = server;
+export default server;
 
 function parseCorsOrigins(value) {
   if (!value) {
