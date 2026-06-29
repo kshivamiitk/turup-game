@@ -129,7 +129,6 @@ Vercel environment variables:
 ```bash
 NEXT_PUBLIC_APP_URL=https://turup-game.vercel.app
 NEXT_PUBLIC_SOCKET_PATH=/api/socket-io
-SOCKET_CORS_ORIGIN=https://turup-game.vercel.app
 ```
 
 Leave `NEXT_PUBLIC_SOCKET_URL` empty for Vercel-only deployment. Set it only if you intentionally point the frontend at a different socket host.
