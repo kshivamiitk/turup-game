@@ -56,6 +56,7 @@ const snapshotEvents: Array<keyof ServerToClientEvents> = [
 
 const roomSessionKey = "turup.currentRoom";
 const socketServerUrl = process.env.NEXT_PUBLIC_SOCKET_URL || undefined;
+const socketPath = process.env.NEXT_PUBLIC_SOCKET_PATH || "/api/socket-io/socket.io";
 
 export const useTurupStore = create<TurupStore>((set, get) => ({
   socket: null,
@@ -70,7 +71,8 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
 
     set({ connectionStatus: "connecting" });
     const socket: ClientSocket = io(socketServerUrl, {
-      transports: ["websocket", "polling"],
+      path: socketPath,
+      transports: ["websocket"],
       autoConnect: true
     });
 

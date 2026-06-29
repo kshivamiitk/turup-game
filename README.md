@@ -8,7 +8,8 @@ Fast, browser-based real-time Turup for 4 players. Rooms, players, hands, bids, 
 - TailwindCSS
 - Framer Motion
 - Zustand
-- Express custom server
+- Express custom server for local/full Node hosting
+- Vercel Function WebSocket endpoint for Vercel hosting
 - Socket.IO
 - No database, ORM, Redis, file storage, auth provider, or persistence layer
 
@@ -108,23 +109,41 @@ The server is authoritative. Clients only send intended actions and render room 
 - `app/` Next.js app shell and global styles
 - `components/` lobby, table, cards, score, and chat UI
 - `game/` pure card, rule, and scoring modules
-- `server/` Express, Socket.IO, room store, serialization, and game transitions
+- `api/` Vercel Function WebSocket entry point
+- `server/` Socket.IO handlers, local Express server, room store, serialization, and game transitions
 - `socket/` client Socket.IO store
 - `types/` shared TypeScript contracts
 - `utils/` shared utility helpers
 
 ## Deployment
 
-This app needs a persistent Node process for Socket.IO and in-memory rooms.
+### Vercel Only
 
-Vercel can serve the Next.js frontend, but Vercel serverless functions do not run this custom Express + Socket.IO server as a long-lived process. If you deploy only to Vercel, the page can load while the realtime connection stays offline.
+The app can be deployed as a single Vercel project:
 
-Recommended options:
+- Next.js serves the frontend.
+- `api/socket-io.ts` hosts Socket.IO as a Vercel Function WebSocket endpoint.
+- The browser connects to `/api/socket-io/socket.io` on the same Vercel domain by default.
 
-- Deploy the whole app to a Node host that supports WebSockets, such as Render, Railway, Fly.io, DigitalOcean App Platform, or a VPS.
-- Or deploy the frontend to Vercel and deploy this same app/server to a Node host for Socket.IO, then point Vercel at that socket backend.
+Vercel environment variables:
 
-Required build/start commands:
+```bash
+NEXT_PUBLIC_APP_URL=https://turup-game.vercel.app
+NEXT_PUBLIC_SOCKET_PATH=/api/socket-io/socket.io
+SOCKET_CORS_ORIGIN=https://turup-game.vercel.app
+```
+
+Leave `NEXT_PUBLIC_SOCKET_URL` empty for Vercel-only deployment. Set it only if you intentionally point the frontend at a different socket host.
+
+Vercel WebSockets are currently served through Functions. If the project dashboard requires it, enable Fluid Compute/WebSockets for the deployment.
+
+### Important In-Memory Limit
+
+Rooms, reconnect state, scores, and matches still live only in server memory. A redeploy, function restart, cold start replacement, or scaled multi-instance runtime can clear rooms because this project intentionally has no database or Redis adapter.
+
+`vercel.json` sets the socket function duration to 300 seconds, which is the safe Hobby-plan maximum. If your Vercel plan supports longer durations, raise `functions["api/socket-io.ts"].maxDuration` for longer uninterrupted rooms.
+
+For the most reliable long-running rooms, use one persistent Node process:
 
 ```bash
 npm install
@@ -133,25 +152,3 @@ npm start
 ```
 
 Set `PORT` if the hosting provider requires it. Set `APP_URL` or `NEXT_PUBLIC_APP_URL` to the deployed base URL so invite links use the public domain.
-
-Use a single Node process per active room set. Because there is no shared database or Redis adapter, rooms are not shared across multiple server instances.
-
-### Vercel Frontend + Separate Socket Server
-
-On the Node backend host:
-
-```bash
-NEXT_PUBLIC_APP_URL=https://turup-game.vercel.app
-SOCKET_CORS_ORIGIN=https://turup-game.vercel.app
-npm run build
-npm start
-```
-
-On Vercel:
-
-```bash
-NEXT_PUBLIC_SOCKET_URL=https://your-node-backend.example.com
-NEXT_PUBLIC_APP_URL=https://turup-game.vercel.app
-```
-
-Redeploy Vercel after setting `NEXT_PUBLIC_SOCKET_URL`; public Next.js env vars are baked into the client bundle at build time.

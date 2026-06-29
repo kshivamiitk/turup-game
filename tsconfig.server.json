@@ -11,6 +11,6 @@
     "incremental": false,
     "isolatedModules": false
   },
-  "include": ["server/**/*.ts", "game/**/*.ts", "types/**/*.ts"],
+  "include": ["api/**/*.ts", "server/**/*.ts", "game/**/*.ts", "types/**/*.ts"],
   "exclude": ["node_modules", "dist", ".next"]
 }
