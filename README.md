@@ -141,7 +141,7 @@ Vercel WebSockets are served through Fluid Compute. `vercel.json` enables Fluid 
 
 Rooms, reconnect state, scores, and matches still live only in server memory. A redeploy, function restart, cold start replacement, or scaled multi-instance runtime can clear rooms because this project intentionally has no database or Redis adapter.
 
-`vercel.json` sets the server duration to 300 seconds, which is the safe Hobby-plan maximum. If your Vercel plan supports longer durations, raise `functions["server.cjs"].maxDuration` for longer uninterrupted rooms.
+Function duration is controlled by the Vercel plan and Fluid Compute settings for the project.
 
 For the most reliable long-running rooms, use one persistent Node process:
 
