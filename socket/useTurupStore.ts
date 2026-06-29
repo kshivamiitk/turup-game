@@ -72,6 +72,7 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
     set({ connectionStatus: "connecting" });
     const socket: ClientSocket = io(socketServerUrl, {
       path: socketPath,
+      addTrailingSlash: false,
       transports: ["websocket"],
       autoConnect: true
     });
