@@ -37,7 +37,6 @@ class RealtimeIo {
   connect(webSocket: WebSocketLike): void {
     const socket = new RealtimeSocket(this, webSocket);
     this.sockets.set(socket.id, socket);
-    console.log("Realtime WebSocket connected.", socket.id);
     this.connectionHandler?.(socket);
     socket.attach();
   }
@@ -143,7 +142,6 @@ class RealtimeSocket {
   private handleMessage(rawMessage: unknown): void {
     const message = parseWireMessage(rawMessage);
     if (!message?.event) {
-      console.error("Realtime WebSocket ignored an unreadable message.", describeMessage(rawMessage));
       return;
     }
 
@@ -213,13 +211,4 @@ function toMessageText(data: unknown): string {
   }
 
   return String(data);
-}
-
-function describeMessage(rawMessage: unknown): string {
-  const data =
-    typeof rawMessage === "object" && rawMessage !== null && "data" in rawMessage
-      ? (rawMessage as MessageEvent).data
-      : rawMessage;
-
-  return Object.prototype.toString.call(data);
 }
