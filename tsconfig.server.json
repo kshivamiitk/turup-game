@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": ".",
+    "incremental": false,
+    "isolatedModules": false
+  },
+  "include": ["server/**/*.ts", "game/**/*.ts", "types/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".next"]
+}

@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(120deg, rgba(119, 41, 44, 0.22), transparent 34%),
+    linear-gradient(240deg, rgba(31, 96, 93, 0.2), transparent 42%),
+    linear-gradient(135deg, #111013 0%, #181012 38%, #101f1e 100%);
+  color: #f7f2e7;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #d5aa4e;
+  outline-offset: 2px;
+}
+
+.table-surface {
+  background:
+    linear-gradient(135deg, rgba(19, 48, 43, 0.98), rgba(21, 33, 34, 0.98)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.026) 1px, transparent 1px, transparent 10px);
+  border: 1px solid rgba(213, 170, 78, 0.22);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(213, 170, 78, 0.48) rgba(255, 255, 255, 0.08);
+}
+
+@layer components {
+  .app-frame {
+    @apply mx-auto w-full max-w-7xl;
+  }
+
+  .surface-panel {
+    @apply rounded-lg border border-white/10 bg-[#151416]/90 shadow-table backdrop-blur;
+  }
+
+  .subtle-panel {
+    @apply rounded-md border border-white/10 bg-white/[0.055];
+  }
+
+  .field-label {
+    @apply mb-2 block text-xs font-bold uppercase tracking-wide text-stone-400;
+  }
+
+  .field-input {
+    @apply h-11 w-full rounded-md border border-white/10 bg-[#0d0c0e] px-3 text-sm text-stone-100 shadow-inner placeholder:text-stone-600 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .primary-button {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brass px-4 text-sm font-black text-ink transition hover:bg-[#e2bd68] disabled:cursor-not-allowed disabled:opacity-45;
+  }
+
+  .secondary-button {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.07] px-4 text-sm font-bold text-stone-100 transition hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-45;
+  }
+
+  .success-button {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md bg-emerald-400 px-4 text-sm font-black text-emerald-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-45;
+  }
+
+  .danger-button {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-md border border-ember/50 bg-ember/10 px-3 text-sm font-bold text-red-100 transition hover:bg-ember/20;
+  }
+
+  .icon-button {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/[0.07] text-stone-100 transition hover:bg-white/[0.12];
+  }
+
+  .status-chip {
+    @apply inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-white/[0.07] px-3 text-xs font-bold text-stone-200;
+  }
+
+  .table-felt {
+    background:
+      linear-gradient(135deg, rgba(20, 74, 63, 0.95), rgba(13, 45, 44, 0.96)),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.026) 1px, transparent 1px, transparent 14px);
+    border: 1px solid rgba(213, 170, 78, 0.24);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+      inset 0 0 70px rgba(0, 0, 0, 0.34),
+      0 22px 70px rgba(0, 0, 0, 0.28);
+  }
+}
