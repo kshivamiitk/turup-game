@@ -184,11 +184,31 @@ function parseWireMessage(rawMessage: unknown): WireMessage | null {
     typeof rawMessage === "object" && rawMessage !== null && "data" in rawMessage
       ? (rawMessage as MessageEvent).data
       : rawMessage;
-  const text = Buffer.isBuffer(data) ? data.toString("utf8") : String(data);
+  const text = toMessageText(data);
 
   try {
     return JSON.parse(text) as WireMessage;
   } catch {
     return null;
   }
+}
+
+function toMessageText(data: unknown): string {
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Buffer.isBuffer(data)) {
+    return data.toString("utf8");
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return Buffer.from(data).toString("utf8");
+  }
+
+  if (ArrayBuffer.isView(data)) {
+    return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("utf8");
+  }
+
+  return String(data);
 }
