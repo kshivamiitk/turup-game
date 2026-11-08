@@ -21,11 +21,14 @@ export function createRoomSnapshot(
     connected: target.connected,
     isHost: target.username === room.hostUsername,
     tricksWon: target.tricksWon,
-    bid: bidsRevealed ? target.bid : null,
+    // Bids are public the moment they're placed (sequential bidding).
+    bid: target.bid,
     bidSubmitted: target.bid !== null,
     cardsRemaining: target.hand.length,
     roundScore: round?.summary?.playerResults.find((result) => result.username === target.username)?.scoreDelta ?? 0,
-    totalScore: room.scores[target.username] ?? 0
+    totalScore: room.scores[target.username] ?? 0,
+    mic: target.mic,
+    cam: target.cam
   }));
 
   const playerScores: PlayerScore[] = players
@@ -57,6 +60,7 @@ export function createRoomSnapshot(
       seat: player?.seat ?? null,
       isHost: username === room.hostUsername,
       isSpectator,
+      token: requester?.token ?? ""
     },
     players,
     spectators: [...room.spectators.values()]
@@ -79,9 +83,10 @@ export function createRoomSnapshot(
     chat: room.chat.slice(-30),
     statusMessage: getStatusMessage(room),
     turnStartedAt: round?.turnStartedAt ?? null,
-    turnDurationMs: round?.turnDurationMs ?? 30_000,
+    turnDurationMs: round?.turnDurationMs ?? 45_000,
     roundSummary: round?.summary ?? null,
-    winnerUsername: room.winnerUsername
+    winnerUsername: room.winnerUsername,
+    serverNow: Date.now()
   };
 }
 
@@ -93,8 +98,10 @@ function getStatusMessage(room: RoomState): string {
       const chooser = getOrderedPlayers(room).find((player) => player.seat === room.round?.trumpChooserSeat);
       return `${chooser?.displayName ?? "The declarer"} is choosing Turup.`;
     }
-    case "bidding":
-      return "Players are submitting bids.";
+    case "bidding": {
+      const bidder = getOrderedPlayers(room).find((player) => player.seat === room.round?.currentTurnSeat);
+      return `${bidder?.displayName ?? "A player"} is bidding.`;
+    }
     case "playing": {
       const turnPlayer = getOrderedPlayers(room).find((player) => player.seat === room.round?.currentTurnSeat);
       return `${turnPlayer?.displayName ?? "A player"} is on turn.`;

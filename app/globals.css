@@ -108,3 +108,377 @@ textarea:focus-visible {
       0 22px 70px rgba(0, 0, 0, 0.28);
   }
 }
+
+/* --- Redesign layer --- */
+body {
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(213, 170, 78, 0.16), transparent 50%),
+    radial-gradient(ellipse at 110% 110%, rgba(31, 120, 100, 0.22), transparent 55%),
+    linear-gradient(160deg, #0e0d10 0%, #14100f 45%, #0b1816 100%);
+  background-attachment: fixed;
+}
+
+main {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.brand-title {
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  background: linear-gradient(100deg, #f6dd9a, #d5aa4e 45%, #f3e6c4 60%, #c08a2e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.table-felt {
+  background:
+    radial-gradient(ellipse at center, rgba(34, 110, 88, 0.95) 0%, rgba(16, 64, 54, 0.97) 55%, rgba(9, 38, 33, 0.98) 100%);
+  border: 2px solid rgba(213, 170, 78, 0.35);
+  box-shadow:
+    inset 0 0 0 6px rgba(60, 33, 18, 0.55),
+    inset 0 0 0 7px rgba(213, 170, 78, 0.25),
+    inset 0 0 90px rgba(0, 0, 0, 0.45),
+    0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.seat-active {
+  border-color: #d5aa4e;
+  background: rgba(213, 170, 78, 0.12);
+  animation: seat-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes seat-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(213, 170, 78, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(213, 170, 78, 0); }
+}
+
+.bid-chip {
+  height: 2.5rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 900;
+  color: #e7e0d2;
+  transition: transform 0.12s, background 0.12s;
+}
+.bid-chip:hover { background: rgba(255, 255, 255, 0.12); }
+.bid-chip-active {
+  background: #d5aa4e;
+  color: #07100f;
+  border-color: #f2d48a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(213, 170, 78, 0.35);
+}
+
+.media-button {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.15s;
+}
+.media-on { background: rgba(52, 211, 153, 0.18); color: #a7f3d0; border-color: rgba(52, 211, 153, 0.4); }
+.media-off { background: rgba(216, 75, 75, 0.18); color: #fecaca; border-color: rgba(216, 75, 75, 0.45); }
+
+.video-tile {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: #0b0b0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.video-tile-active { border-color: #d5aa4e; box-shadow: 0 0 0 2px rgba(213, 170, 78, 0.5); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .seat-active { animation: none; }
+}
+
+.trick-stage {
+  position: relative;
+  width: min(100%, 17rem);
+  aspect-ratio: 1;
+}
+.trick-emblem {
+  position: absolute;
+  inset: 32%;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px dashed rgba(213, 170, 78, 0.35);
+  font-size: 2.25rem;
+  color: rgba(213, 170, 78, 0.6);
+}
+.trick-slot { position: absolute; }
+.trick-n { top: 0; left: 50%; translate: -50% 0; }
+.trick-s { bottom: 0; left: 50%; translate: -50% 0; }
+.trick-w { left: 0; top: 50%; translate: 0 -50%; }
+.trick-e { right: 0; top: 50%; translate: 0 -50%; }
+
+.seat-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(22, 21, 24, 0.92), rgba(14, 13, 16, 0.92));
+  padding: 0.6rem 0.7rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s, background 0.2s;
+}
+.seat-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 2.4rem;
+  width: 2.4rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: linear-gradient(140deg, #2b2a30, #18171b);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-weight: 900;
+  color: #f2e7cf;
+}
+.seat-avatar-me { background: linear-gradient(140deg, #e7c26c, #a77a26); color: #1b1307; border-color: #f3d68f; }
+.seat-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  height: 0.7rem;
+  width: 0.7rem;
+  border-radius: 999px;
+  border: 2px solid #121114;
+}
+.seat-chip {
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 0.05rem 0.4rem;
+  color: #cfc7b8;
+}
+
+.rank-badge {
+  display: grid;
+  place-items: center;
+  height: 1.15rem;
+  width: 1.15rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #a8a29e;
+}
+.rank-badge-lead { background: #d5aa4e; color: #07100f; }
+
+/* --- Cards --- */
+.playing-card {
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: #fffdf7;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.18),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.playing-card-trump {
+  box-shadow:
+    0 0 0 2px #d5aa4e,
+    0 6px 18px rgba(213, 170, 78, 0.35);
+}
+.playing-card-playable { cursor: pointer; }
+.playing-card-playable:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 0 0 2px #f2d48a, 0 14px 30px rgba(0, 0, 0, 0.5);
+}
+.playing-card-dim { cursor: not-allowed; filter: brightness(0.55) saturate(0.6); }
+.trump-tag {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  display: grid;
+  place-items: center;
+  height: 0.95rem;
+  min-width: 0.95rem;
+  border-radius: 0.3rem;
+  background: #d5aa4e;
+  color: #07100f;
+  font-size: 0.58rem;
+  font-weight: 900;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/*
+ * Hand: every card gets an equal share of the row and overlaps its neighbour as needed,
+ * so 13 cards always fit the screen width with no scroll. Card size scales with viewport.
+ */
+.hand-row {
+  --card-w: clamp(3.6rem, 13vw, 6.2rem);
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem 0 0.15rem;
+  min-height: calc(var(--card-w) * 1.4 + 1rem);
+}
+.hand-slot {
+  position: relative;
+  flex: 0 1 var(--card-w);
+  min-width: 0;
+}
+.hand-slot:last-child { flex-shrink: 0; }
+.hand-card {
+  width: var(--card-w);
+  aspect-ratio: 100 / 140;
+}
+.tap-hint {
+  position: absolute;
+  left: 0;
+  top: -1.55rem;
+  width: var(--card-w);
+  text-align: center;
+  font-size: 0.6rem;
+  font-weight: 900;
+  color: #07100f;
+  background: #d5aa4e;
+  border-radius: 999px;
+  padding: 0.1rem 0;
+  pointer-events: none;
+}
+
+/* --- Bidding ladder --- */
+.panel-glass {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(20, 19, 23, 0.94), rgba(12, 12, 14, 0.94));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.bid-step {
+  border-radius: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.45rem 0.5rem;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+.bid-step-done { background: rgba(213, 170, 78, 0.08); border-color: rgba(213, 170, 78, 0.25); }
+.bid-step-now { border-color: #d5aa4e; background: rgba(213, 170, 78, 0.14); animation: seat-pulse 1.6s ease-in-out infinite; }
+.bid-dots { display: inline-flex; gap: 3px; }
+.bid-dots i {
+  height: 6px;
+  width: 6px;
+  border-radius: 999px;
+  background: #d5aa4e;
+  animation: bid-dot 1s ease-in-out infinite;
+}
+.bid-dots i:nth-child(2) { animation-delay: 0.15s; }
+.bid-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bid-dot {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* --- Polish --- */
+.surface-panel {
+  background: linear-gradient(180deg, rgba(24, 23, 27, 0.92), rgba(16, 15, 18, 0.92));
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.table-felt::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.07), transparent 60%);
+}
+.table-felt { position: relative; }
+.table-felt > * { position: relative; }
+.primary-button {
+  background: linear-gradient(180deg, #e7c26c, #c99a3f);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 6px 16px rgba(213, 170, 78, 0.25);
+}
+.primary-button:hover { background: linear-gradient(180deg, #f0cf80, #d5aa4e); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bid-step-now, .bid-dots i { animation: none; }
+}
+
+.play-order {
+  position: absolute;
+  left: 50%;
+  bottom: -0.55rem;
+  translate: -50% 0;
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #1b1a1e;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #d6d0c4;
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 1rem;
+  text-align: center;
+}
+.play-order-lead { background: #d5aa4e; border-color: #f2d48a; color: #07100f; }
+.lead-badge {
+  position: absolute;
+  top: -0.55rem;
+  right: 0.6rem;
+  border-radius: 999px;
+  background: #d5aa4e;
+  color: #07100f;
+  padding: 0 0.45rem;
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 1.1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.table-strip {
+  margin-bottom: 0.4rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(213, 170, 78, 0.18);
+  background: radial-gradient(ellipse at 30% 0%, rgba(34, 110, 88, 0.55), rgba(12, 40, 35, 0.75));
+  padding: 0.45rem 0.6rem 0.5rem;
+}
+.empty-slot {
+  display: grid;
+  place-items: center;
+  height: 4.6rem;
+  width: 100%;
+  border-radius: 0.45rem;
+  border: 1.5px dashed rgba(255, 255, 255, 0.18);
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.35);
+}
+@media (min-width: 640px) { .empty-slot { height: 5.6rem; } }
+.empty-slot-you { border-color: #d5aa4e; color: #d5aa4e; background: rgba(213, 170, 78, 0.08); animation: seat-pulse 1.6s ease-in-out infinite; }
+.winning-tag {
+  position: absolute;
+  left: 50%;
+  top: -0.5rem;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: #34d399;
+  color: #052e1f;
+  padding: 0 0.35rem;
+  font-size: 0.55rem;
+  font-weight: 900;
+  line-height: 0.95rem;
+  white-space: nowrap;
+}
+
+.trump-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(213, 170, 78, 0.55);
+  background: linear-gradient(180deg, rgba(213, 170, 78, 0.18), rgba(213, 170, 78, 0.06));
+  padding: 0 0.6rem;
+  box-shadow: 0 0 18px rgba(213, 170, 78, 0.15);
+}

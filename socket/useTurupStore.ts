@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { RealtimeClientSocket } from "./realtimeClient";
+import { attachCallSocket, syncCall } from "./useCallStore";
 import type { RoomSnapshot, Suit } from "../types/game";
 import type { ClientToServerEvents, ServerToClientEvents } from "../types/socket";
 
@@ -13,6 +14,7 @@ type StoredRoomSession = {
   username: string;
   displayName: string;
   isSpectator: boolean;
+  token: string;
 };
 
 type TurupStore = {
@@ -20,6 +22,7 @@ type TurupStore = {
   connectionStatus: ConnectionStatus;
   isRestoringSession: boolean;
   room: RoomSnapshot | null;
+  clockOffsetMs: number;
   error: string | null;
   initSocket: () => void;
   clearError: () => void;
@@ -63,6 +66,7 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
   connectionStatus: "offline",
   isRestoringSession: false,
   room: null,
+  clockOffsetMs: 0,
   error: null,
   initSocket: () => {
     if (get().socket) {
@@ -71,13 +75,15 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
 
     set({ connectionStatus: "connecting" });
     const socket: ClientSocket = new RealtimeClientSocket(socketServerUrl, { path: socketPath });
+    attachCallSocket(socket);
 
     let reconnectingFromStorage = false;
 
     const applySnapshot = (snapshot: RoomSnapshot) => {
       reconnectingFromStorage = false;
       storeRoomSession(snapshot);
-      set({ room: snapshot, error: null, isRestoringSession: false });
+      set({ room: snapshot, error: null, isRestoringSession: false, clockOffsetMs: snapshot.serverNow - Date.now() });
+      syncCall(snapshot);
     };
 
     socket.on("connect", () => {
@@ -90,19 +96,19 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
           roomCode: storedSession.roomCode,
           username: storedSession.username,
           displayName: storedSession.displayName,
-          asSpectator: storedSession.isSpectator
+          asSpectator: storedSession.isSpectator,
+          token: storedSession.token
         });
       }
     });
+    socket.on("connecting", () => set({ connectionStatus: "connecting" }));
     socket.on("disconnect", () => set({ connectionStatus: "offline" }));
-    socket.on("connect_error", () =>
-      set({ connectionStatus: "offline", error: "Realtime server unavailable." })
-    );
     socket.on("error_message", (payload) => {
-      if (reconnectingFromStorage) {
+      if (reconnectingFromStorage || payload.message === "You were removed from the room.") {
         reconnectingFromStorage = false;
         clearRoomSession();
         set({ room: null, isRestoringSession: false });
+        syncCall(null);
       }
       set({ error: payload.message });
     });
@@ -118,27 +124,34 @@ export const useTurupStore = create<TurupStore>((set, get) => ({
   clearError: () => set({ error: null }),
   createRoom: (username, displayName, targetScore) => {
     clearRoomSession();
-    get().socket?.emit("create_room", { username, displayName, targetScore });
+    send("create_room", { username, displayName, targetScore });
   },
   joinRoom: (roomCode, username, displayName, asSpectator = false) => {
     clearRoomSession(false);
-    get().socket?.emit("join_room", { roomCode, username, displayName, asSpectator });
+    send("join_room", { roomCode, username, displayName, asSpectator, token: getSavedToken(roomCode, username) });
   },
   leaveRoom: () => {
     get().socket?.emit("leave_room");
     clearRoomSession();
     set({ room: null, isRestoringSession: false });
+    syncCall(null);
   },
-  setReady: (ready) => get().socket?.emit("set_ready", { ready }),
-  setTargetScore: (targetScore) => get().socket?.emit("set_target_score", { targetScore }),
-  startGame: () => get().socket?.emit("start_game"),
-  chooseTrump: (suit) => get().socket?.emit("choose_trump", { suit }),
-  submitBid: (bid) => get().socket?.emit("submit_bid", { bid }),
-  playCard: (cardId) => get().socket?.emit("play_card", { cardId }),
-  sendChat: (message) => get().socket?.emit("send_chat", { message }),
-  kickPlayer: (username) => get().socket?.emit("kick_player", { username }),
-  returnToLobby: () => get().socket?.emit("return_to_lobby")
+  setReady: (ready) => send("set_ready", { ready }),
+  setTargetScore: (targetScore) => send("set_target_score", { targetScore }),
+  startGame: () => send("start_game"),
+  chooseTrump: (suit) => send("choose_trump", { suit }),
+  submitBid: (bid) => send("submit_bid", { bid }),
+  playCard: (cardId) => send("play_card", { cardId }),
+  sendChat: (message) => send("send_chat", { message }),
+  kickPlayer: (username) => send("kick_player", { username }),
+  returnToLobby: () => send("return_to_lobby")
 }));
+
+function send(event: string, payload?: unknown): void {
+  if (!useTurupStore.getState().socket?.emit(event, payload)) {
+    useTurupStore.setState({ error: "You're offline. Reconnecting… try again in a moment." });
+  }
+}
 
 function getStoredRoomSession(): StoredRoomSession | null {
   if (typeof window === "undefined") {
@@ -152,7 +165,7 @@ function getStoredRoomSession(): StoredRoomSession | null {
 
   try {
     const parsed = JSON.parse(rawSession) as Partial<StoredRoomSession>;
-    if (!parsed.roomCode || !parsed.username) {
+    if (!parsed.roomCode || !parsed.username || !parsed.token) {
       return null;
     }
 
@@ -160,12 +173,46 @@ function getStoredRoomSession(): StoredRoomSession | null {
       roomCode: parsed.roomCode,
       username: parsed.username,
       displayName: parsed.displayName || parsed.username,
-      isSpectator: Boolean(parsed.isSpectator)
+      isSpectator: Boolean(parsed.isSpectator),
+      token: parsed.token
     };
   } catch {
     clearRoomSession(false);
     return null;
   }
+}
+
+/*
+ * Per-tab session (sessionStorage) drives auto-restore on refresh, so several tabs can hold different seats.
+ * Seat tokens are also kept in localStorage so closing the tab and joining again with the same name reclaims the seat.
+ */
+const tokenVaultKey = "turup.seatTokens";
+
+function readTokenVault(): Record<string, string> {
+  try {
+    return JSON.parse(window.localStorage.getItem(tokenVaultKey) ?? "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function saveToken(roomCode: string, username: string, token: string): void {
+  try {
+    const vault = readTokenVault();
+    vault[`${roomCode.toUpperCase()}:${username}`] = token;
+    // Keep only the most recent 20 seats.
+    const entries = Object.entries(vault).slice(-20);
+    window.localStorage.setItem(tokenVaultKey, JSON.stringify(Object.fromEntries(entries)));
+  } catch {
+    // Storage blocked: rejoin after closing the tab won't work, refresh still does.
+  }
+}
+
+function getSavedToken(roomCode: string, username: string): string | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  return readTokenVault()[`${roomCode.trim().toUpperCase()}:${username.trim()}`];
 }
 
 function shouldRestoreSession(session: StoredRoomSession): boolean {
@@ -187,10 +234,12 @@ function storeRoomSession(snapshot: RoomSnapshot): void {
     roomCode: snapshot.roomCode,
     username: snapshot.me.username,
     displayName: snapshot.me.displayName,
-    isSpectator: snapshot.me.isSpectator
+    isSpectator: snapshot.me.isSpectator,
+    token: snapshot.me.token
   };
 
   window.sessionStorage.setItem(roomSessionKey, JSON.stringify(session));
+  saveToken(snapshot.roomCode, session.username, session.token);
   setRoomUrl(snapshot.roomCode);
 }
 

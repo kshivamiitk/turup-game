@@ -8,35 +8,38 @@ type ScoreboardProps = {
 
 export function Scoreboard({ room }: ScoreboardProps) {
   return (
-    <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" aria-label="Player standings">
+    <section className="grid grid-cols-2 gap-2 xl:grid-cols-4" aria-label="Player standings">
       {room.playerScores.map((player, index) => {
         const isWinner = room.winnerUsername === player.username;
+        const isMe = player.username === room.me.username;
         const progress = Math.min(100, Math.max(0, (player.totalScore / room.targetScore) * 100));
 
         return (
           <div
             key={player.username}
             className={cn(
-              "rounded-md border bg-[#111013]/75 p-2.5",
-              isWinner ? "border-brass shadow-card" : index === 0 ? "border-emerald-300/25" : "border-white/10"
+              "rounded-xl border bg-[#111013]/75 px-2.5 py-2",
+              isWinner ? "border-brass shadow-card" : isMe ? "border-brass/40" : "border-white/10"
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-[10px] font-black uppercase tracking-wide text-stone-500">Seat {player.seat + 1}</div>
-                <div className="mt-0.5 truncate text-sm font-black text-stone-100">{player.displayName}</div>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className={cn("rank-badge", index === 0 && player.totalScore > 0 && "rank-badge-lead")}>{index + 1}</span>
+                <span className="truncate text-sm font-black text-stone-100">{player.displayName}</span>
               </div>
-              <div className="flex items-center gap-1 text-xl font-black text-brass">
+              <div className="flex items-center gap-1 text-lg font-black tabular-nums text-brass">
                 {isWinner ? <Trophy className="h-4 w-4" /> : null}
                 {player.totalScore}
               </div>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-brass" style={{ width: `${progress}%` }} />
+            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-brass/70 to-brass transition-all duration-700" style={{ width: `${progress}%` }} />
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-[11px] font-bold text-stone-400">
-              <span>{player.roundScore >= 0 ? `+${player.roundScore}` : player.roundScore} round</span>
-              <span>/{room.targetScore}</span>
+            <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-stone-500">
+              <span className={player.roundScore > 0 ? "text-emerald-300" : player.roundScore < 0 ? "text-red-300" : ""}>
+                {player.roundScore > 0 ? `+${player.roundScore}` : player.roundScore} last round
+              </span>
+              <span>/ {room.targetScore}</span>
             </div>
           </div>
         );

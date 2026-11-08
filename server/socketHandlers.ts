@@ -1,10 +1,13 @@
+import { randomUUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
-import { startRound, chooseTrump, playCard, resetRoomToLobby, submitBid } from "./gameEngine";
+import { autoPlayIfAbandoned, startRound, chooseTrump, playCard, resetRoomToLobby, submitBid } from "./gameEngine";
 import {
   bindSocket,
   createRoom,
   deleteExpiredRooms,
   ensureHost,
+  hostGraceMs,
+  markRoomsDirty,
   findNextSeat,
   getOrderedPlayers,
   removeSocketFromRoom,
@@ -54,6 +57,7 @@ export function registerSocketHandlers(io: TurupServer, publicBaseUrl: string): 
           {
             username,
             displayName,
+            token: randomUUID(),
             socketId: socket.id,
             connected: true,
             joinedAt: now,
@@ -73,11 +77,11 @@ export function registerSocketHandlers(io: TurupServer, publicBaseUrl: string): 
     });
 
     socket.on("join_room", (payload) => {
-      runAction(socket, () => joinRoom(socket, io, publicBaseUrl, payload.roomCode, payload.username, payload.displayName, Boolean(payload.asSpectator)));
+      runAction(socket, () => joinRoom(socket, io, publicBaseUrl, payload.roomCode, payload.username, payload.displayName, Boolean(payload.asSpectator), payload.token));
     });
 
     socket.on("reconnect_room", (payload) => {
-      runAction(socket, () => joinRoom(socket, io, publicBaseUrl, payload.roomCode, payload.username, payload.displayName, Boolean(payload.asSpectator), true));
+      runAction(socket, () => joinRoom(socket, io, publicBaseUrl, payload.roomCode, payload.username, payload.displayName, Boolean(payload.asSpectator), payload.token));
     });
 
     socket.on("leave_room", () => {
@@ -219,6 +223,28 @@ export function registerSocketHandlers(io: TurupServer, publicBaseUrl: string): 
       });
     });
 
+    socket.on("set_media", (payload) => {
+      runAction(socket, () => {
+        const { room, player } = requirePlayerSession(socket);
+        player.mic = Boolean(payload?.mic);
+        player.cam = Boolean(payload?.cam);
+        emitRoomSnapshots(io, room, publicBaseUrl);
+      });
+    });
+
+    // WebRTC signaling relay: only between connected players of the same room.
+    socket.on("rtc_signal", (payload) => {
+      const session = roomStore.socketSessions.get(socket.id);
+      const room = session && roomStore.rooms.get(session.roomCode);
+      const target = room?.players.get(String(payload?.to ?? ""));
+      if (!session || session.isSpectator || !target?.socketId || !room?.players.has(session.username)) {
+        return;
+      }
+      io.to(target.socketId).emit("rtc_signal", { from: session.username, data: payload.data });
+    });
+
+    socket.on("ping", () => socket.emit("pong"));
+
     socket.on("disconnect", () => {
       const room = removeSocketFromRoom(socket.id);
       if (room) {
@@ -229,7 +255,16 @@ export function registerSocketHandlers(io: TurupServer, publicBaseUrl: string): 
 
   setInterval(() => {
     deleteExpiredRooms();
-  }, 60_000).unref();
+    for (const room of roomStore.rooms.values()) {
+      const host = room.hostUsername;
+      ensureHost(room, hostGraceMs);
+      const autoPlayed = autoPlayIfAbandoned(room);
+      if (host !== room.hostUsername || autoPlayed) {
+        touchRoom(room);
+        emitRoomSnapshots(io, room, publicBaseUrl, autoPlayed?.matchEnded ? "match_ended" : autoPlayed?.roundEnded ? "round_ended" : "room_updated");
+      }
+    }
+  }, 5_000).unref();
 }
 
 function joinRoom(
@@ -240,7 +275,7 @@ function joinRoom(
   rawUsername: string,
   rawDisplayName: string | undefined,
   asSpectator: boolean,
-  replaceConnectedSession = false
+  token: string | undefined
 ): void {
   leaveCurrentRoom(socket, io, publicBaseUrl, false);
 
@@ -260,8 +295,9 @@ function joinRoom(
       throw new Error("Player could not be found.");
     }
 
-    if (player.connected && !replaceConnectedSession) {
-      throw new Error("That username is already connected in this room.");
+    // Only the original browser (holding the seat token) can reclaim a seat, connected or not.
+    if (!token || token !== player.token) {
+      throw new Error("That username is already taken in this room.");
     }
 
     replaceExistingSocket(io, room, player.socketId);
@@ -283,8 +319,8 @@ function joinRoom(
       throw new Error("Spectator could not be found.");
     }
 
-    if (spectator.connected && !replaceConnectedSession) {
-      throw new Error("That username is already connected in this room.");
+    if (!token || token !== spectator.token) {
+      throw new Error("That username is already taken in this room.");
     }
 
     replaceExistingSocket(io, room, spectator.socketId);
@@ -304,6 +340,7 @@ function joinRoom(
     const spectator: SpectatorState = {
       username,
       displayName,
+      token: randomUUID(),
       socketId: socket.id,
       connected: true,
       joinedAt: now,
@@ -330,6 +367,7 @@ function joinRoom(
     username,
     displayName,
     seat,
+    token: randomUUID(),
     socketId: socket.id,
     ready: false,
     connected: true,
@@ -337,7 +375,9 @@ function joinRoom(
     lastSeenAt: now,
     hand: [],
     bid: null,
-    tricksWon: 0
+    tricksWon: 0,
+    mic: false,
+    cam: false
   };
 
   room.players.set(username, player);
@@ -380,6 +420,7 @@ function leaveCurrentRoom(socket: TurupSocket, io: TurupServer, publicBaseUrl: s
 
   if (room.players.size === 0) {
     roomStore.rooms.delete(room.code);
+    markRoomsDirty();
     return;
   }
 

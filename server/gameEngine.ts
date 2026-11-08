@@ -1,11 +1,11 @@
-import { createDeck, getCardById, shuffleDeck, sortHand } from "../game/cards";
+import { createDeck, getCardById, rankValue, shuffleDeck, sortHand } from "../game/cards";
 import { calculateRoundSummary } from "../game/scoring";
 import { determineTrickWinner, getLegalCards, getSeatOrder, hasDuplicateCards } from "../game/rules";
 import type { PlayerState, PublicTrick, RoomState, Suit } from "../types/game";
 import { suits } from "../types/game";
 import { getOrderedPlayers, getPlayerBySeat, touchRoom } from "./roomStore";
 
-const turnDurationMs = 30_000;
+const turnDurationMs = 45_000;
 
 export type PlayCardResult = {
   cardAccepted: boolean;
@@ -118,9 +118,10 @@ export function chooseTrump(room: RoomState, username: string, suit: Suit): void
     }
   }
 
+  // Bidding goes one at a time, starting with the Turup declarer, then clockwise. Each bid is public.
   room.phase = "bidding";
-  room.round.currentTurnSeat = null;
-  room.round.turnStartedAt = null;
+  room.round.currentTurnSeat = room.round.starterSeat;
+  room.round.turnStartedAt = Date.now();
   touchRoom(room);
 }
 
@@ -129,13 +130,21 @@ export function submitBid(room: RoomState, username: string, bid: number): void 
     throw new Error("Bids can only be submitted during bidding.");
   }
 
-  if (!Number.isInteger(bid) || bid < 0 || bid > 13) {
-    throw new Error("Bid must be a whole number from 0 to 13.");
+  if (!Number.isInteger(bid) || bid < 1 || bid > 13) {
+    throw new Error("Bid must be a whole number from 1 to 13.");
   }
 
   const player = room.players.get(username);
   if (!player) {
     throw new Error("Only seated players can bid.");
+  }
+
+  if (player.seat !== room.round.currentTurnSeat) {
+    throw new Error("Wait for your turn to bid.");
+  }
+
+  if (player.bid !== null) {
+    throw new Error("You have already bid this round.");
   }
 
   player.bid = bid;
@@ -145,8 +154,10 @@ export function submitBid(room: RoomState, username: string, bid: number): void 
     room.phase = "playing";
     room.round.currentTurnSeat = room.round.starterSeat;
     room.round.currentTrick = createEmptyTrick(1);
-    room.round.turnStartedAt = Date.now();
+  } else {
+    room.round.currentTurnSeat = (player.seat + 1) % 4;
   }
+  room.round.turnStartedAt = Date.now();
 
   touchRoom(room);
 }
@@ -227,6 +238,30 @@ export function playCard(room: RoomState, username: string, cardId: string): Pla
 
   touchRoom(room);
   return result;
+}
+
+/**
+ * Acts for a disconnected player whose turn timer ran out, so one dropout can't stall the table:
+ * bids 1 during bidding, plays the lowest legal card during play.
+ */
+export function autoPlayIfAbandoned(room: RoomState, now = Date.now()): PlayCardResult | null {
+  const round = room.round;
+  if ((room.phase !== "playing" && room.phase !== "bidding") || !round || round.currentTurnSeat === null || !round.turnStartedAt) {
+    return null;
+  }
+  if (now - round.turnStartedAt < round.turnDurationMs) {
+    return null;
+  }
+  const player = getPlayerBySeat(room, round.currentTurnSeat);
+  if (!player || player.connected) {
+    return null;
+  }
+  if (room.phase === "bidding") {
+    submitBid(room, player.username, 1);
+    return { cardAccepted: false, trickWon: false, roundEnded: false, matchEnded: false };
+  }
+  const [card] = [...getLegalCards(player.hand, round.currentTrick)].sort((a, b) => rankValue[a.rank] - rankValue[b.rank]);
+  return card ? playCard(room, player.username, card.id) : null;
 }
 
 export function resetRoomToLobby(room: RoomState): void {
