@@ -39,8 +39,8 @@ npm start
 6. The server deals 5 cards to each player.
 7. The round starter chooses Turup, the trump suit.
 8. The server deals the remaining cards until each player has 13.
-9. Each player bids from 1 to 13 tricks.
-10. Players play 13 tricks, following suit when possible.
+9. Bidding goes **one player at a time**, starting with the Turup declarer and going clockwise. Each bid (1–13) is shown to everyone the moment it's placed, so later bidders can plan around it. The table also shows the running total vs. 13 tricks.
+10. Players play 13 tricks, following suit when possible. On touch screens, tap a card once to lift it and again to play it.
 11. The server calculates trick winners and round score.
 12. Rounds continue until one player reaches the target score.
 

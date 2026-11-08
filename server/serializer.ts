@@ -21,7 +21,8 @@ export function createRoomSnapshot(
     connected: target.connected,
     isHost: target.username === room.hostUsername,
     tricksWon: target.tricksWon,
-    bid: bidsRevealed ? target.bid : null,
+    // Bids are public the moment they're placed (sequential bidding).
+    bid: target.bid,
     bidSubmitted: target.bid !== null,
     cardsRemaining: target.hand.length,
     roundScore: round?.summary?.playerResults.find((result) => result.username === target.username)?.scoreDelta ?? 0,
@@ -97,8 +98,10 @@ function getStatusMessage(room: RoomState): string {
       const chooser = getOrderedPlayers(room).find((player) => player.seat === room.round?.trumpChooserSeat);
       return `${chooser?.displayName ?? "The declarer"} is choosing Turup.`;
     }
-    case "bidding":
-      return "Players are submitting bids.";
+    case "bidding": {
+      const bidder = getOrderedPlayers(room).find((player) => player.seat === room.round?.currentTurnSeat);
+      return `${bidder?.displayName ?? "A player"} is bidding.`;
+    }
     case "playing": {
       const turnPlayer = getOrderedPlayers(room).find((player) => player.seat === room.round?.currentTurnSeat);
       return `${turnPlayer?.displayName ?? "A player"} is on turn.`;

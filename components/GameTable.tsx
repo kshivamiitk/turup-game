@@ -26,16 +26,33 @@ export function GameTable({ room }: GameTableProps) {
   const returnToLobby = useTurupStore((state) => state.returnToLobby);
   const clockOffsetMs = useTurupStore((state) => state.clockOffsetMs);
   const [bid, setBid] = useState(room.ownBid ?? 1);
+  // Touch screens: first tap lifts a card, second tap plays it (overlapped cards are easy to mis-tap).
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const seconds = useTurnCountdown(room.turnStartedAt, room.turnDurationMs, clockOffsetMs);
   const mePlayer = room.players.find((player) => player.username === room.me.username);
   const currentPlayer = room.players.find((player) => player.seat === room.currentTurnSeat);
   const legalCardIds = useMemo(() => new Set(room.legalCardIds), [room.legalCardIds]);
   const isMyTurn = Boolean(mePlayer && room.currentTurnSeat === mePlayer.seat && room.phase === "playing");
+  const isMyBid = Boolean(mePlayer && room.currentTurnSeat === mePlayer.seat && room.phase === "bidding");
   const seatLayout = getSeatLayout(mePlayer?.seat ?? null);
 
   useEffect(() => {
     setBid(room.ownBid ?? 1);
   }, [room.ownBid]);
+
+  useEffect(() => {
+    setSelectedCardId(null);
+  }, [room.currentTurnSeat, room.hand.length]);
+
+  function onCardTap(cardId: string) {
+    const touch = window.matchMedia("(pointer: coarse)").matches;
+    if (touch && selectedCardId !== cardId) {
+      setSelectedCardId(cardId);
+      return;
+    }
+    setSelectedCardId(null);
+    playCard(cardId);
+  }
 
   function onSubmitBid(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,7 +129,7 @@ export function GameTable({ room }: GameTableProps) {
           </div>
 
           {room.hand.length > 0 || room.me.isSpectator ? (
-          <section className={cn("sticky bottom-0 z-10 mt-2.5 rounded-2xl border bg-[#111013]/95 p-2.5 backdrop-blur transition", isMyTurn ? "border-brass/60 shadow-[0_0_40px_rgba(213,170,78,0.18)]" : "border-white/10")}>
+          <section className={cn("sticky bottom-0 z-10 mt-2.5 rounded-2xl border bg-[#111013]/95 p-2.5 backdrop-blur transition", isMyTurn || isMyBid ? "border-brass/60 shadow-[0_0_40px_rgba(213,170,78,0.18)]" : "border-white/10")}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               {mePlayer ? (
                 <div className="flex min-w-0 items-center gap-2">
@@ -135,29 +152,54 @@ export function GameTable({ room }: GameTableProps) {
               ) : (
                 <div className="text-sm font-black text-stone-100">Spectator view</div>
               )}
-              <div className={cn("rounded-md px-3 py-1.5 text-xs font-black", isMyTurn ? "animate-pulse bg-brass text-ink" : "bg-white/[0.07] text-stone-400")}>
-                {isMyTurn ? "Your turn" : currentPlayer ? `${currentPlayer.displayName}'s turn` : phaseLabel(room.phase)}
+              <div className={cn("rounded-md px-3 py-1.5 text-xs font-black", isMyTurn || isMyBid ? "animate-pulse bg-brass text-ink" : "bg-white/[0.07] text-stone-400")}>
+                {isMyTurn
+                  ? "Your turn: tap a card"
+                  : isMyBid
+                    ? "Your bid"
+                    : currentPlayer
+                      ? `${currentPlayer.displayName} ${room.phase === "bidding" ? "is bidding" : "to play"}`
+                      : phaseLabel(room.phase)}
               </div>
             </div>
             {room.me.isSpectator ? (
               <div className="rounded-md border border-dashed border-white/10 py-8 text-center text-sm font-bold text-stone-500">Watching as spectator</div>
             ) : (
-              <motion.div className="scrollbar-thin hand-fan flex min-h-[7.8rem] gap-2 overflow-x-auto pb-1 pt-2" layout>
-                {room.hand.map((card) => {
-                  const playable = legalCardIds.has(card.id);
-                  const canPlayNow = room.phase === "playing";
-                  return (
-                    <CardView
-                      key={card.id}
-                      card={card}
-                      trumpSuit={room.trumpSuit}
-                      playable={canPlayNow && isMyTurn && playable}
-                      disabled={canPlayNow && (!isMyTurn || !playable)}
-                      onClick={canPlayNow ? playCard : undefined}
-                    />
-                  );
-                })}
-              </motion.div>
+              // Cards overlap just enough to always fit the width: no horizontal scrolling.
+              <div className="hand-row" aria-label="Your hand">
+                <AnimatePresence initial={false}>
+                  {room.hand.map((card, index) => {
+                    const playable = legalCardIds.has(card.id);
+                    const canPlayNow = room.phase === "playing";
+                    const live = canPlayNow && isMyTurn && playable;
+                    const selected = live && selectedCardId === card.id;
+                    return (
+                      <motion.div
+                        key={card.id}
+                        className="hand-slot"
+                        style={{ zIndex: index }}
+                        layout
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: selected ? -26 : live ? -10 : 0 }}
+                        exit={{ opacity: 0, y: -60, transition: { duration: 0.2 } }}
+                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                      >
+                        <div className="hand-card">
+                          <CardView
+                            card={card}
+                            trumpSuit={room.trumpSuit}
+                            fluid
+                            playable={live}
+                            disabled={canPlayNow && !live}
+                            onClick={canPlayNow ? onCardTap : undefined}
+                          />
+                        </div>
+                        {selected ? <div className="tap-hint">Tap again</div> : null}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
             )}
           </section>
           ) : null}
@@ -292,36 +334,8 @@ function ActionPanel({
     );
   }
 
-  if (room.phase === "bidding" && !room.me.isSpectator) {
-    const submitted = room.ownBid !== null;
-    return (
-      <form className="grid gap-3 rounded-xl border border-white/10 bg-[#111013]/90 p-3" onSubmit={onSubmitBid}>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="text-sm font-black text-stone-100">How many tricks will you take?</div>
-          <div className="text-xs font-bold text-stone-400">
-            Make it: <span className="text-emerald-300">+{bid * 10}</span> (+1 per extra) · Miss: <span className="text-red-300">−{bid * 10}</span>
-          </div>
-        </div>
-        <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-[repeat(13,minmax(0,1fr))]" role="radiogroup" aria-label="Bid">
-          {Array.from({ length: 13 }, (_, index) => index + 1).map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={bid === value}
-              className={cn("bid-chip", bid === value && "bid-chip-active")}
-              onClick={() => setBid(value)}
-            >
-              {value}
-            </button>
-          ))}
-        </div>
-        <button className="primary-button" type="submit">
-          <Target className="h-4 w-4" />
-          {submitted ? `Change bid (locked in: ${room.ownBid})` : `Lock in ${bid}`}
-        </button>
-      </form>
-    );
+  if (room.phase === "bidding") {
+    return <BiddingPanel room={room} bid={bid} setBid={setBid} onSubmitBid={onSubmitBid} />;
   }
 
   if (room.phase === "round_over" || room.phase === "match_over") {
@@ -374,6 +388,105 @@ function ActionPanel({
   }
 
   return null;
+}
+
+function BiddingPanel({
+  room,
+  bid,
+  setBid,
+  onSubmitBid
+}: {
+  room: RoomSnapshot;
+  bid: number;
+  setBid: (bid: number) => void;
+  onSubmitBid: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const starter = room.trumpChooserSeat ?? 0;
+  const order = [0, 1, 2, 3].map((offset) => findSeat(room, (starter + offset) % 4)).filter(Boolean) as PublicPlayer[];
+  const placed = order.filter((player) => player.bid !== null);
+  const total = placed.reduce((sum, player) => sum + (player.bid ?? 0), 0);
+  const myTurn = room.me.seat !== null && room.currentTurnSeat === room.me.seat && room.ownBid === null;
+  const bidder = findSeat(room, room.currentTurnSeat ?? -1);
+
+  return (
+    <div className="panel-glass grid gap-3 p-3">
+      {/* Bid order ladder: everyone sees each bid the moment it is placed. */}
+      <div className="grid grid-cols-4 gap-1.5">
+        {order.map((player, index) => {
+          const now = player.seat === room.currentTurnSeat;
+          const isMe = player.username === room.me.username;
+          return (
+            <div key={player.username} className={cn("bid-step", now && "bid-step-now", player.bid !== null && "bid-step-done")}>
+              <div className="text-[10px] font-black uppercase tracking-wide text-stone-500">{index + 1}{index === 0 ? " · Turup" : ""}</div>
+              <div className="truncate text-xs font-black text-stone-200">{isMe ? "You" : player.displayName}</div>
+              <div className="mt-0.5 text-xl font-black leading-none tabular-nums">
+                {player.bid !== null ? (
+                  <motion.span initial={{ scale: 1.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="inline-block text-brass">
+                    {player.bid}
+                  </motion.span>
+                ) : now ? (
+                  <span className="bid-dots" aria-label="bidding">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                ) : (
+                  <span className="text-stone-600">–</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between text-[11px] font-bold text-stone-400">
+        <span>
+          Bids so far: <span className="font-black text-stone-100">{total}</span> of 13 tricks
+        </span>
+        {total > 13 ? <span className="text-red-300">Overbid: someone will fall short</span> : placed.length > 0 && total < 13 ? <span>{13 - total} tricks unclaimed</span> : null}
+      </div>
+
+      {myTurn ? (
+        <form
+          ref={(node) => node?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          className="grid gap-2.5 border-t border-white/10 pt-3"
+          onSubmit={onSubmitBid}
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="text-sm font-black text-stone-100">Your bid: how many tricks will you take?</div>
+            <div className="text-xs font-bold text-stone-400">
+              Make it <span className="text-emerald-300">+{bid * 10}</span> · Miss <span className="text-red-300">−{bid * 10}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-[repeat(13,minmax(0,1fr))]" role="radiogroup" aria-label="Bid">
+            {Array.from({ length: 13 }, (_, index) => index + 1).map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={bid === value}
+                className={cn("bid-chip", bid === value && "bid-chip-active")}
+                onClick={() => setBid(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+          <button className="primary-button" type="submit">
+            <Target className="h-4 w-4" />
+            Lock in {bid}
+          </button>
+        </form>
+      ) : room.ownBid !== null ? (
+        <div className="rounded-lg bg-white/[0.04] py-2 text-center text-xs font-bold text-stone-400">
+          You bid <span className="font-black text-brass">{room.ownBid}</span>. Waiting for {bidder ? bidder.displayName : "others"}…
+        </div>
+      ) : (
+        <div className="rounded-lg bg-white/[0.04] py-2 text-center text-xs font-bold text-stone-400">
+          Study your hand. {bidder ? `${bidder.displayName} is bidding.` : ""} Your turn is coming.
+        </div>
+      )}
+    </div>
+  );
 }
 
 function RoundSummary({ room }: { room: RoomSnapshot }) {
@@ -441,7 +554,7 @@ function SeatPanel({ player, room }: { player: PublicPlayer | undefined; room: R
             {player.isHost ? <span className="text-[10px] text-brass">★</span> : null}
           </div>
           <div className="mt-0.5 flex flex-wrap gap-1 text-[11px] font-black">
-            <span className="seat-chip">Bid {player.bidSubmitted ? player.bid ?? "✓" : "–"}</span>
+            <span className={cn("seat-chip", player.bid !== null && "!bg-brass/20 !text-brass")}>Bid {player.bid ?? "–"}</span>
             <span className="seat-chip">Won {player.tricksWon}</span>
             {!player.connected ? <span className="seat-chip !bg-ember/25 !text-red-100">offline</span> : null}
           </div>
