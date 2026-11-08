@@ -40,7 +40,7 @@ npm start
 7. The round starter chooses Turup, the trump suit.
 8. The server deals the remaining cards until each player has 13.
 9. Bidding goes **one player at a time**, starting with the Turup declarer and going clockwise. Each bid (1–13) is shown to everyone the moment it's placed, so later bidders can plan around it. The table also shows the running total vs. 13 tricks.
-10. Players play 13 tricks, following suit when possible. On touch screens, tap a card once to lift it and again to play it.
+10. Players play 13 tricks, following suit when possible. **Whoever wins a trick leads the next one** (the table marks the leader and the card that was led). On touch screens, tap a card once to lift it and again to play it.
 11. The server calculates trick winners and round score.
 12. Rounds continue until one player reaches the target score.
 
@@ -48,7 +48,7 @@ Every seated player is scored individually. There are no teams or partners.
 
 ## Scoring
 
-Scoring lives in `game/scoring.ts` (self-check: `npx tsx game/scoring.check.ts`).
+Scoring lives in `game/scoring.ts` (self-checks: `npx tsx game/scoring.check.ts`, `npx tsx game/rules.check.ts`).
 
 - **Made the bid** (tricks won ≥ bid): `bid × 10` + 1 per extra trick. Bid 4, won 5 → **+41**.
 - **Fell short** (tricks won < bid): `−(bid × 10)`, no matter how close. Bid 4, won 3 → **−40**.

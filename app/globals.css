@@ -402,3 +402,36 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .bid-step-now, .bid-dots i { animation: none; }
 }
+
+.play-order {
+  position: absolute;
+  left: 50%;
+  bottom: -0.55rem;
+  translate: -50% 0;
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #1b1a1e;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #d6d0c4;
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 1rem;
+  text-align: center;
+}
+.play-order-lead { background: #d5aa4e; border-color: #f2d48a; color: #07100f; }
+.lead-badge {
+  position: absolute;
+  top: -0.55rem;
+  right: 0.6rem;
+  border-radius: 999px;
+  background: #d5aa4e;
+  color: #07100f;
+  padding: 0 0.45rem;
+  font-size: 0.6rem;
+  font-weight: 900;
+  line-height: 1.1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}

@@ -154,7 +154,9 @@ export function GameTable({ room }: GameTableProps) {
               )}
               <div className={cn("rounded-md px-3 py-1.5 text-xs font-black", isMyTurn || isMyBid ? "animate-pulse bg-brass text-ink" : "bg-white/[0.07] text-stone-400")}>
                 {isMyTurn
-                  ? "Your turn: tap a card"
+                  ? room.currentTrick?.cards.length
+                    ? "Your turn: tap a card"
+                    : "Your lead: play any card"
                   : isMyBid
                     ? "Your bid"
                     : currentPlayer
@@ -231,12 +233,15 @@ function TrickCenter({ room, currentPlayer }: { room: RoomSnapshot; currentPlaye
     return () => window.clearTimeout(timer);
   }, [lastCompleted]);
 
-  const revealing = revealIndex !== null && lastCompleted?.index === revealIndex;
+  // Stop the reveal the moment the winner leads, so their opening card is never hidden.
+  const nextTrickStarted = Boolean(room.currentTrick?.cards.length);
+  const revealing = revealIndex !== null && lastCompleted?.index === revealIndex && !nextTrickStarted;
   const trick = revealing ? lastCompleted : room.currentTrick;
   const layout = getSeatLayout(room.me.seat);
   const position = (seat: number) =>
     seat === layout.bottom ? "trick-s" : seat === layout.top ? "trick-n" : seat === layout.left ? "trick-w" : "trick-e";
   const winnerName = revealing && lastCompleted?.winnerSeat != null ? displayNameForSeat(room, lastCompleted.winnerSeat) : null;
+  const winnerIsMe = revealing && lastCompleted?.winnerSeat === room.me.seat;
 
   return (
     <div className="relative flex min-h-[13rem] flex-1 items-center justify-center sm:min-h-[15rem]">
@@ -254,7 +259,7 @@ function TrickCenter({ room, currentPlayer }: { room: RoomSnapshot; currentPlaye
           {room.trumpSuit ? <span className={isRed(room.trumpSuit) ? "text-ember/60" : "text-stone-200/40"}>{suitSymbol[room.trumpSuit]}</span> : "T"}
         </div>
         <AnimatePresence>
-          {trick?.cards.map((played) => {
+          {trick?.cards.map((played, order) => {
             const won = revealing && played.seat === trick.winnerSeat;
             return (
               <motion.div
@@ -265,8 +270,12 @@ function TrickCenter({ room, currentPlayer }: { room: RoomSnapshot; currentPlaye
                 exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.25 } }}
                 transition={{ type: "spring", stiffness: 380, damping: 26 }}
               >
-                <div className={cn("rounded-md", won && "ring-4 ring-brass shadow-[0_0_30px_rgba(213,170,78,0.6)]")}>
+                <div className={cn("relative rounded-md", won && "ring-4 ring-brass shadow-[0_0_30px_rgba(213,170,78,0.6)]")}>
                   <CardView card={played.card} trumpSuit={room.trumpSuit} compact />
+                  {/* Play order: 1 = led the trick. */}
+                  <span className={cn("play-order", order === 0 && "play-order-lead")} title={order === 0 ? "Led this trick" : `Played ${order + 1}`}>
+                    {order === 0 ? "LED" : order + 1}
+                  </span>
                 </div>
               </motion.div>
             );
@@ -282,11 +291,17 @@ function TrickCenter({ room, currentPlayer }: { room: RoomSnapshot; currentPlaye
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
           >
-            {winnerName} takes it
+            {winnerIsMe ? "You win: your lead" : `${winnerName} wins: leads next`}
           </motion.div>
         ) : !trick?.cards.length ? (
           <motion.div className="absolute bottom-0 text-sm font-black text-stone-300" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {room.phase === "playing" && currentPlayer ? `${currentPlayer.displayName} leads` : null}
+            {room.phase === "playing" && currentPlayer
+              ? currentPlayer.username === room.me.username
+                ? room.trickHistory.length
+                  ? "You won the last trick: lead any card"
+                  : "You lead the first trick"
+                : `${currentPlayer.displayName} ${room.trickHistory.length ? "won the last trick and leads" : "leads the first trick"}`
+              : null}
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -540,9 +555,12 @@ function SeatPanel({ player, room }: { player: PublicPlayer | undefined; room: R
   const active = player.seat === room.currentTurnSeat || (room.phase === "trump_selection" && player.seat === room.trumpChooserSeat);
   const need = player.bid !== null && room.phase === "playing" ? player.bid - player.tricksWon : null;
   const isMe = player.username === room.me.username;
+  const leadSeat = room.phase === "playing" ? room.currentTrick?.cards[0]?.seat ?? room.currentTurnSeat : null;
+  const leads = leadSeat === player.seat;
 
   return (
-    <div className={cn("seat-card", active && "seat-active", !player.connected && "opacity-60")}>
+    <div className={cn("seat-card relative", active && "seat-active", !player.connected && "opacity-60")}>
+      {leads ? <span className="lead-badge">Leads</span> : null}
       <div className="flex items-center gap-2.5">
         <div className={cn("seat-avatar", isMe && "seat-avatar-me")}>
           {player.displayName.slice(0, 1).toUpperCase()}
