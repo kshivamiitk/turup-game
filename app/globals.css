@@ -435,3 +435,50 @@ main {
   text-transform: uppercase;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
+
+.table-strip {
+  margin-bottom: 0.4rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(213, 170, 78, 0.18);
+  background: radial-gradient(ellipse at 30% 0%, rgba(34, 110, 88, 0.55), rgba(12, 40, 35, 0.75));
+  padding: 0.45rem 0.6rem 0.5rem;
+}
+.empty-slot {
+  display: grid;
+  place-items: center;
+  height: 4.6rem;
+  width: 100%;
+  border-radius: 0.45rem;
+  border: 1.5px dashed rgba(255, 255, 255, 0.18);
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.35);
+}
+@media (min-width: 640px) { .empty-slot { height: 5.6rem; } }
+.empty-slot-you { border-color: #d5aa4e; color: #d5aa4e; background: rgba(213, 170, 78, 0.08); animation: seat-pulse 1.6s ease-in-out infinite; }
+.winning-tag {
+  position: absolute;
+  left: 50%;
+  top: -0.5rem;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: #34d399;
+  color: #052e1f;
+  padding: 0 0.35rem;
+  font-size: 0.55rem;
+  font-weight: 900;
+  line-height: 0.95rem;
+  white-space: nowrap;
+}
+
+.trump-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(213, 170, 78, 0.55);
+  background: linear-gradient(180deg, rgba(213, 170, 78, 0.18), rgba(213, 170, 78, 0.06));
+  padding: 0 0.6rem;
+  box-shadow: 0 0 18px rgba(213, 170, 78, 0.15);
+}

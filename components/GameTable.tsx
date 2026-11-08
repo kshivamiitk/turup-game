@@ -4,6 +4,7 @@ import { Copy, LogOut, Play, RotateCcw, Swords, Target, Timer, Trophy } from "lu
 import type { PublicPlayer, RoomSnapshot, Suit } from "../types/game";
 import { suits } from "../types/game";
 import { suitName, suitSymbol } from "../game/cards";
+import { currentTrickLeader } from "../game/rules";
 import { useTurupStore } from "../socket/useTurupStore";
 import { CardView } from "./CardView";
 import { CallPanel, MediaControls } from "./CallPanel";
@@ -76,6 +77,7 @@ export function GameTable({ room }: GameTableProps) {
               <button className="icon-button !h-8 !w-8" onClick={copyRoomCode} aria-label="Copy room code">
                 <Copy className="h-3.5 w-3.5" />
               </button>
+              <TrumpBadge room={room} />
             </div>
             <div className="mt-1 truncate text-sm font-bold text-stone-400">{room.statusMessage}</div>
           </div>
@@ -129,7 +131,7 @@ export function GameTable({ room }: GameTableProps) {
           </div>
 
           {room.hand.length > 0 || room.me.isSpectator ? (
-          <section className={cn("sticky bottom-0 z-10 mt-2.5 rounded-2xl border bg-[#111013]/95 p-2.5 backdrop-blur transition", isMyTurn || isMyBid ? "border-brass/60 shadow-[0_0_40px_rgba(213,170,78,0.18)]" : "border-white/10")}>
+          <section className={cn(room.phase === "playing" && "sticky bottom-0 z-10", "mt-2.5 rounded-2xl border bg-[#111013]/95 p-2.5 backdrop-blur transition", isMyTurn || isMyBid ? "border-brass/60 shadow-[0_0_40px_rgba(213,170,78,0.18)]" : "border-white/10")}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
               {mePlayer ? (
                 <div className="flex min-w-0 items-center gap-2">
@@ -137,6 +139,12 @@ export function GameTable({ room }: GameTableProps) {
                   <div className="min-w-0">
                     <div className="truncate text-sm font-black text-stone-100">
                       You · <span className="text-brass">{mePlayer.totalScore} pts</span>
+                      {room.trumpSuit ? (
+                        <span className="ml-2 text-xs font-black text-stone-400">
+                          Turup{" "}
+                          <span className={cn("text-base", isRed(room.trumpSuit) ? "text-ember" : "text-stone-100")}>{suitSymbol[room.trumpSuit]}</span>
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex gap-1 text-[11px] font-black">
                       <span className="seat-chip">Bid {room.ownBid ?? "–"}</span>
@@ -159,11 +167,14 @@ export function GameTable({ room }: GameTableProps) {
                     : "Your lead: play any card"
                   : isMyBid
                     ? "Your bid"
-                    : currentPlayer
-                      ? `${currentPlayer.displayName} ${room.phase === "bidding" ? "is bidding" : "to play"}`
-                      : phaseLabel(room.phase)}
+                    : room.phase === "trump_selection"
+                      ? "Turup being chosen"
+                      : currentPlayer
+                        ? `${currentPlayer.displayName} ${room.phase === "bidding" ? "is bidding" : "to play"}`
+                        : phaseLabel(room.phase)}
               </div>
             </div>
+            <TableStrip room={room} />
             {room.me.isSpectator ? (
               <div className="rounded-md border border-dashed border-white/10 py-8 text-center text-sm font-bold text-stone-500">Watching as spectator</div>
             ) : (
@@ -208,11 +219,90 @@ export function GameTable({ room }: GameTableProps) {
         </div>
       </section>
 
+      <TrumpAnnouncement room={room} />
       <aside className="scrollbar-thin grid content-start gap-3 lg:sticky lg:top-3 lg:max-h-[calc(100dvh-1.5rem)] lg:overflow-y-auto">
         <CallPanel room={room} />
         <TrickHistory room={room} />
         <ChatPanel room={room} />
       </aside>
+    </div>
+  );
+}
+
+/**
+ * "On the table" strip inside the hand bar: the cards already played this trick, who played them,
+ * who is winning so far, and whether you must follow suit. It sits right above your cards so you
+ * never have to scroll up to see what others played before choosing.
+ */
+function TableStrip({ room }: { room: RoomSnapshot }) {
+  const trick = room.currentTrick;
+  if (room.phase !== "playing" || !trick) {
+    return null;
+  }
+
+  const myTurn = room.me.seat !== null && room.currentTurnSeat === room.me.seat;
+  const lead = trick.leadSuit;
+  const leader = lead && room.trumpSuit && trick.cards.length ? currentTrickLeader(trick.cards, room.trumpSuit, lead) : null;
+  const haveLead = lead ? room.hand.some((card) => card.suit === lead) : false;
+  const nameOf = (seat: number) => (seat === room.me.seat ? "You" : displayNameForSeat(room, seat));
+
+  if (trick.cards.length === 0) {
+    return (
+      <div className="table-strip">
+        <span className="text-xs font-bold text-stone-400">
+          {myTurn ? "Table is empty: you lead. Any card." : `Waiting for ${nameOf(room.currentTurnSeat ?? 0)} to lead…`}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="table-strip" aria-label="Cards on the table">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="text-[10px] font-black uppercase tracking-wider text-stone-500">On the table · trick {trick.index}</span>
+        {lead ? (
+          <span className={cn("text-[11px] font-black", myTurn ? "text-brass" : "text-stone-400")}>
+            {myTurn
+              ? haveLead
+                ? `Follow ${suitSymbol[lead]} ${suitName[lead]}`
+                : `No ${suitName[lead]}: play any card${room.trumpSuit ? ` (${suitSymbol[room.trumpSuit]} trump can win)` : ""}`
+              : `${suitSymbol[lead]} led`}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex items-end gap-2 overflow-hidden">
+        <AnimatePresence initial={false}>
+          {trick.cards.map((played, order) => {
+            const winning = leader?.seat === played.seat;
+            return (
+              <motion.div
+                key={played.card.id}
+                className="flex w-[3.3rem] shrink-0 flex-col items-center gap-1 sm:w-16"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <div className={cn("relative rounded-md", winning && "ring-2 ring-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.45)]")}>
+                  <CardView card={played.card} trumpSuit={room.trumpSuit} compact />
+                  {winning ? <span className="winning-tag">winning</span> : null}
+                </div>
+                <span className="w-full truncate text-center text-[10px] font-black text-stone-300">
+                  {order === 0 ? "★ " : ""}
+                  {nameOf(played.seat)}
+                </span>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+        {Array.from({ length: 4 - trick.cards.length }, (_, index) => {
+          const seat = ((trick.cards.at(-1)?.seat ?? 0) + 1 + index) % 4;
+          return (
+            <div key={`empty-${seat}`} className="flex w-[3.3rem] shrink-0 flex-col items-center gap-1 sm:w-16">
+              <div className={cn("empty-slot", index === 0 && myTurn && "empty-slot-you")}>{index === 0 ? (myTurn ? "You" : "…") : ""}</div>
+              <span className="w-full truncate text-center text-[10px] font-bold text-stone-500">{nameOf(seat)}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -249,8 +339,9 @@ function TrickCenter({ room, currentPlayer }: { room: RoomSnapshot; currentPlaye
         Trick {trick?.index ?? room.trickHistory.length + 1}/13
       </div>
       {room.trumpSuit ? (
-        <div className="absolute right-0 top-0 flex items-center gap-1 rounded-md border border-brass/30 bg-brass/10 px-2.5 py-1 text-xs font-black text-brass">
-          Turup <span className={cn("text-base leading-none", isRed(room.trumpSuit) ? "text-ember" : "text-stone-100")}>{suitSymbol[room.trumpSuit]}</span>
+        <div className="absolute right-0 top-0 flex items-center gap-1.5 rounded-lg border border-brass/40 bg-black/40 px-3 py-1.5 text-sm font-black text-brass">
+          Turup <span className={cn("text-xl leading-none", isRed(room.trumpSuit) ? "text-ember" : "text-stone-100")}>{suitSymbol[room.trumpSuit]}</span>
+          <span className="text-stone-100">{suitName[room.trumpSuit]}</span>
         </div>
       ) : null}
 
@@ -349,6 +440,16 @@ function ActionPanel({
     );
   }
 
+  if (room.phase === "trump_selection") {
+    const chooser = findSeat(room, room.trumpChooserSeat ?? -1);
+    return (
+      <div className="panel-glass p-3 text-center">
+        <div className="text-sm font-black text-stone-100">{chooser?.displayName ?? "The declarer"} is choosing Turup…</div>
+        <div className="mt-1 text-xs font-bold text-stone-400">You'll see the trump suit here as soon as it's picked.</div>
+      </div>
+    );
+  }
+
   if (room.phase === "bidding") {
     return <BiddingPanel room={room} bid={bid} setBid={setBid} onSubmitBid={onSubmitBid} />;
   }
@@ -403,6 +504,76 @@ function ActionPanel({
   }
 
   return null;
+}
+
+function TrumpBadge({ room }: { room: RoomSnapshot }) {
+  if (!room.trumpSuit) {
+    return null;
+  }
+  const chooser = findSeat(room, room.trumpChooserSeat ?? -1);
+  return (
+    <span
+      className="trump-badge"
+      title={`Turup (trump) is ${suitName[room.trumpSuit]}, chosen by ${chooser?.displayName ?? "the declarer"}`}
+    >
+      <span className="text-[10px] font-black uppercase tracking-wider text-brass/80">Turup</span>
+      <span className={cn("text-xl leading-none", isRed(room.trumpSuit) ? "text-ember" : "text-stone-50")}>{suitSymbol[room.trumpSuit]}</span>
+      <span className="hidden text-sm font-black text-stone-100 sm:inline">{suitName[room.trumpSuit]}</span>
+    </span>
+  );
+}
+
+/** Announcement for ~2.5s when a new Turup is chosen, shown once per round to every player. */
+function TrumpAnnouncement({ room }: { room: RoomSnapshot }) {
+  const key = room.trumpSuit ? `${room.roomCode}-${room.roundNumber}-${room.trumpSuit}` : null;
+  const shownKey = useRef<string | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!key || key === shownKey.current || room.phase !== "bidding") {
+      return;
+    }
+    shownKey.current = key;
+    setVisible(true);
+  }, [key, room.phase]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    const timer = window.setTimeout(() => setVisible(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [visible]);
+
+  const chooser = findSeat(room, room.trumpChooserSeat ?? -1);
+  const mine = chooser?.username === room.me.username;
+
+  return (
+    <AnimatePresence>
+      {visible && room.trumpSuit ? (
+        <motion.div
+          className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-black/40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          role="status"
+          aria-live="polite"
+        >
+          <motion.div
+            className="surface-panel px-8 py-6 text-center"
+            initial={{ scale: 0.6, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 18 }}
+          >
+            <div className="text-xs font-black uppercase tracking-[0.2em] text-brass">Turup is</div>
+            <div className={cn("my-1 text-7xl leading-none", isRed(room.trumpSuit) ? "text-ember" : "text-stone-50")}>{suitSymbol[room.trumpSuit]}</div>
+            <div className="text-2xl font-black text-stone-50">{suitName[room.trumpSuit]}</div>
+            <div className="mt-1 text-sm font-bold text-stone-400">{mine ? "You chose it" : `Chosen by ${chooser?.displayName ?? "the declarer"}`}</div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
 }
 
 function BiddingPanel({

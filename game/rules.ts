@@ -23,6 +23,11 @@ export function determineTrickWinner(cards: PlayedCard[], trumpSuit: Suit, leadS
     throw new Error("A trick must contain exactly four cards before a winner can be chosen.");
   }
 
+  return currentTrickLeader(cards, trumpSuit, leadSuit);
+}
+
+/** The card winning a trick so far (works on a partial trick; used to show "winning now"). */
+export function currentTrickLeader(cards: PlayedCard[], trumpSuit: Suit, leadSuit: Suit): PlayedCard {
   return cards.reduce((winner, played) => {
     const winnerIsTrump = winner.card.suit === trumpSuit;
     const playedIsTrump = played.card.suit === trumpSuit;
