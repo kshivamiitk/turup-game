@@ -11,6 +11,8 @@ export type JoinRoomPayload = {
   username: string;
   displayName?: string;
   asSpectator?: boolean;
+  /** Secret issued on first join; required to reclaim the seat after a refresh. */
+  token?: string;
 };
 
 export type SetReadyPayload = {
@@ -41,6 +43,16 @@ export type KickPlayerPayload = {
   username: string;
 };
 
+export type SetMediaPayload = {
+  mic: boolean;
+  cam: boolean;
+};
+
+export type RtcSignalPayload = {
+  to: string;
+  data: unknown;
+};
+
 export type ServerErrorPayload = {
   message: string;
 };
@@ -64,6 +76,9 @@ export type ClientToServerEvents = {
   send_chat: (payload: SendChatPayload) => void;
   kick_player: (payload: KickPlayerPayload) => void;
   return_to_lobby: () => void;
+  set_media: (payload: SetMediaPayload) => void;
+  rtc_signal: (payload: RtcSignalPayload) => void;
+  ping: () => void;
 };
 
 export type ServerToClientEvents = {
@@ -84,6 +99,8 @@ export type ServerToClientEvents = {
   error_message: (payload: ServerErrorPayload) => void;
   chat_message: (snapshot: RoomSnapshot) => void;
   reconnect_success: (snapshot: RoomSnapshot) => void;
+  rtc_signal: (payload: { from: string; data: unknown }) => void;
+  pong: () => void;
 };
 
 export type InterServerEvents = Record<string, never>;

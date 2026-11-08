@@ -25,6 +25,8 @@ export type PublicPlayer = {
   cardsRemaining: number;
   roundScore: number;
   totalScore: number;
+  mic: boolean;
+  cam: boolean;
 };
 
 export type PublicSpectator = {
@@ -91,6 +93,7 @@ export type RoomSnapshot = {
     seat: number | null;
     isHost: boolean;
     isSpectator: boolean;
+    token: string;
   };
   players: PublicPlayer[];
   spectators: PublicSpectator[];
@@ -110,12 +113,14 @@ export type RoomSnapshot = {
   turnDurationMs: number;
   roundSummary: RoundSummary | null;
   winnerUsername: string | null;
+  serverNow: number;
 };
 
 export type PlayerState = {
   username: string;
   displayName: string;
   seat: number;
+  token: string;
   socketId: string | null;
   ready: boolean;
   connected: boolean;
@@ -124,11 +129,14 @@ export type PlayerState = {
   hand: Card[];
   bid: number | null;
   tricksWon: number;
+  mic: boolean;
+  cam: boolean;
 };
 
 export type SpectatorState = {
   username: string;
   displayName: string;
+  token: string;
   socketId: string | null;
   connected: boolean;
   joinedAt: number;

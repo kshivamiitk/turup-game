@@ -1,11 +1,11 @@
-import { createDeck, getCardById, shuffleDeck, sortHand } from "../game/cards";
+import { createDeck, getCardById, rankValue, shuffleDeck, sortHand } from "../game/cards";
 import { calculateRoundSummary } from "../game/scoring";
 import { determineTrickWinner, getLegalCards, getSeatOrder, hasDuplicateCards } from "../game/rules";
 import type { PlayerState, PublicTrick, RoomState, Suit } from "../types/game";
 import { suits } from "../types/game";
 import { getOrderedPlayers, getPlayerBySeat, touchRoom } from "./roomStore";
 
-const turnDurationMs = 30_000;
+const turnDurationMs = 45_000;
 
 export type PlayCardResult = {
   cardAccepted: boolean;
@@ -129,8 +129,8 @@ export function submitBid(room: RoomState, username: string, bid: number): void 
     throw new Error("Bids can only be submitted during bidding.");
   }
 
-  if (!Number.isInteger(bid) || bid < 0 || bid > 13) {
-    throw new Error("Bid must be a whole number from 0 to 13.");
+  if (!Number.isInteger(bid) || bid < 1 || bid > 13) {
+    throw new Error("Bid must be a whole number from 1 to 13.");
   }
 
   const player = room.players.get(username);
@@ -227,6 +227,23 @@ export function playCard(room: RoomState, username: string, cardId: string): Pla
 
   touchRoom(room);
   return result;
+}
+
+/** Plays the lowest legal card for a disconnected player whose turn timer ran out, so one dropout can't stall the table. */
+export function autoPlayIfAbandoned(room: RoomState, now = Date.now()): PlayCardResult | null {
+  const round = room.round;
+  if (room.phase !== "playing" || !round || round.currentTurnSeat === null || !round.turnStartedAt) {
+    return null;
+  }
+  if (now - round.turnStartedAt < round.turnDurationMs) {
+    return null;
+  }
+  const player = getPlayerBySeat(room, round.currentTurnSeat);
+  if (!player || player.connected) {
+    return null;
+  }
+  const [card] = [...getLegalCards(player.hand, round.currentTrick)].sort((a, b) => rankValue[a.rank] - rankValue[b.rank]);
+  return card ? playCard(room, player.username, card.id) : null;
 }
 
 export function resetRoomToLobby(room: RoomState): void {

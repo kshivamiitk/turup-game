@@ -1,11 +1,5 @@
 import type { RoundPlayerResult, RoundSummary, Suit } from "../types/game";
 
-export type ScoringConfig = {
-  exactBidBonus: number;
-  perTrickPoint: number;
-  missPenaltyPerTrick: number;
-};
-
 export type PlayerRoundInput = {
   username: string;
   seat: number;
@@ -13,40 +7,25 @@ export type PlayerRoundInput = {
   tricksWon: number;
 };
 
-export const defaultScoringConfig: ScoringConfig = {
-  exactBidBonus: 10,
-  perTrickPoint: 1,
-  missPenaltyPerTrick: 1
-};
-
 /**
- * Default scoring rule:
- * - A player who exactly matches their bid scores 10 bonus points plus 1 point per trick won.
- * - A player who misses their bid loses 1 point for every trick above or below the bid.
+ * Scoring rule:
+ * - Made the bid (tricksWon >= bid): bid x 10, plus 1 per extra trick. Bid 4, won 5 -> 41.
+ * - Fell short (tricksWon < bid): lose bid x 10. Bid 4, won 3 -> -40.
  * - Each player keeps an independent running total. There are no teams.
  */
-export function calculatePlayerScore(
-  bid: number,
-  tricksWon: number,
-  config: ScoringConfig = defaultScoringConfig
-): number {
-  if (bid === tricksWon) {
-    return config.exactBidBonus + tricksWon * config.perTrickPoint;
-  }
-
-  return -Math.abs(bid - tricksWon) * config.missPenaltyPerTrick;
+export function calculatePlayerScore(bid: number, tricksWon: number): number {
+  return tricksWon >= bid ? bid * 10 + (tricksWon - bid) : -bid * 10;
 }
 
 export function calculateRoundSummary(
   roundNumber: number,
   trumpSuit: Suit,
   players: PlayerRoundInput[],
-  previousScores: Record<string, number>,
-  config: ScoringConfig = defaultScoringConfig
+  previousScores: Record<string, number>
 ): RoundSummary {
   const playerResults: RoundPlayerResult[] = players
     .map((player) => {
-      const scoreDelta = calculatePlayerScore(player.bid, player.tricksWon, config);
+      const scoreDelta = calculatePlayerScore(player.bid, player.tricksWon);
       return {
         username: player.username,
         seat: player.seat,

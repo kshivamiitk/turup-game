@@ -25,7 +25,7 @@ export default function HomePage() {
   const screen = useMemo(() => {
     if (isRestoringSession && !room) {
       return (
-        <div className="grid min-h-[calc(100vh-1.5rem)] place-items-center">
+        <div className="grid min-h-[calc(100dvh-1.5rem)] place-items-center">
           <div className="surface-panel px-6 py-5 text-center">
             <div className="text-lg font-black text-stone-50">Reconnecting</div>
             <div className="mt-2 text-sm font-bold text-stone-500">Restoring your room seat.</div>
@@ -46,8 +46,8 @@ export default function HomePage() {
   }, [initialRoomCode, isRestoringSession, room]);
 
   return (
-    <main className="min-h-screen px-3 py-3 text-stone-100 sm:px-5 lg:px-6">
-      <div className="app-frame flex min-h-[calc(100vh-1.5rem)] flex-col">{screen}</div>
+    <main className="min-h-dvh px-2 py-3 text-stone-100 sm:px-4 lg:px-6">
+      <div className="app-frame flex min-h-[calc(100dvh-1.5rem)] flex-col">{screen}</div>
       <AnimatePresence>
         {error ? (
           <motion.div

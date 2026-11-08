@@ -25,7 +25,9 @@ export function createRoomSnapshot(
     bidSubmitted: target.bid !== null,
     cardsRemaining: target.hand.length,
     roundScore: round?.summary?.playerResults.find((result) => result.username === target.username)?.scoreDelta ?? 0,
-    totalScore: room.scores[target.username] ?? 0
+    totalScore: room.scores[target.username] ?? 0,
+    mic: target.mic,
+    cam: target.cam
   }));
 
   const playerScores: PlayerScore[] = players
@@ -57,6 +59,7 @@ export function createRoomSnapshot(
       seat: player?.seat ?? null,
       isHost: username === room.hostUsername,
       isSpectator,
+      token: requester?.token ?? ""
     },
     players,
     spectators: [...room.spectators.values()]
@@ -79,9 +82,10 @@ export function createRoomSnapshot(
     chat: room.chat.slice(-30),
     statusMessage: getStatusMessage(room),
     turnStartedAt: round?.turnStartedAt ?? null,
-    turnDurationMs: round?.turnDurationMs ?? 30_000,
+    turnDurationMs: round?.turnDurationMs ?? 45_000,
     roundSummary: round?.summary ?? null,
-    winnerUsername: room.winnerUsername
+    winnerUsername: room.winnerUsername,
+    serverNow: Date.now()
   };
 }
 

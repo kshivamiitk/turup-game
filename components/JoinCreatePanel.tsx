@@ -14,7 +14,7 @@ export function JoinCreatePanel({ initialRoomCode }: JoinCreatePanelProps) {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [roomCode, setRoomCode] = useState(initialRoomCode);
-  const [targetScore, setTargetScore] = useState(100);
+  const [targetScore, setTargetScore] = useState(300);
 
   useEffect(() => {
     setRoomCode(initialRoomCode);
@@ -35,12 +35,12 @@ export function JoinCreatePanel({ initialRoomCode }: JoinCreatePanelProps) {
   }
 
   return (
-    <div className="grid min-h-[calc(100vh-1.5rem)] content-center gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid min-h-[calc(100dvh-1.5rem)] content-center gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <section className="surface-panel overflow-hidden">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
           <div>
-            <h1 className="text-3xl font-black leading-none text-stone-50 sm:text-4xl">TURUP</h1>
-            <div className="mt-2 text-xs font-bold uppercase tracking-wide text-stone-500">Four seats. One room code.</div>
+            <h1 className="brand-title text-4xl leading-none sm:text-5xl">TURUP</h1>
+            <div className="mt-2 text-xs font-bold uppercase tracking-wide text-stone-400">Four seats · Live video · Bid big or go home</div>
           </div>
           <ConnectionBadge status={connectionStatus} />
         </header>
@@ -118,7 +118,7 @@ export function JoinCreatePanel({ initialRoomCode }: JoinCreatePanelProps) {
         </div>
       </section>
 
-      <aside className="table-felt flex min-h-[27rem] flex-col justify-between rounded-lg p-5">
+      <aside className="table-felt hidden min-h-[27rem] flex-col justify-between rounded-[2rem] p-5 lg:flex">
         <div className="grid grid-cols-3 items-center gap-3">
           <SeatPreview label="P3" />
           <div className="h-16 rounded-md border border-brass/25 bg-black/20" />

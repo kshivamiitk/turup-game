@@ -25,7 +25,8 @@ export function createRealtimeHub(publicBaseUrl: string): RealtimeIo {
 
 class RealtimeIo {
   private connectionHandler: ((socket: RealtimeSocket) => void) | null = null;
-  private readonly sockets = new Map<string, RealtimeSocket>();
+  // Same shape as socket.io's io.sockets.sockets so socketHandlers can look sockets up by id.
+  readonly sockets = { sockets: new Map<string, RealtimeSocket>() };
   private readonly rooms = new Map<string, Set<string>>();
 
   on(event: "connection", handler: (socket: RealtimeSocket) => void): void {
@@ -36,7 +37,7 @@ class RealtimeIo {
 
   connect(webSocket: WebSocketLike): void {
     const socket = new RealtimeSocket(this, webSocket);
-    this.sockets.set(socket.id, socket);
+    this.sockets.sockets.set(socket.id, socket);
     this.connectionHandler?.(socket);
     socket.attach();
   }
@@ -44,14 +45,14 @@ class RealtimeIo {
   to(target: string): { emit: (event: string, payload?: unknown) => void } {
     return {
       emit: (event, payload) => {
-        const socket = this.sockets.get(target);
+        const socket = this.sockets.sockets.get(target);
         if (socket) {
           socket.emit(event, payload);
           return;
         }
 
         for (const socketId of this.rooms.get(target) ?? []) {
-          this.sockets.get(socketId)?.emit(event, payload);
+          this.sockets.sockets.get(socketId)?.emit(event, payload);
         }
       }
     };
@@ -79,7 +80,7 @@ class RealtimeIo {
     for (const roomCode of [...this.rooms.keys()]) {
       this.leave(socket, roomCode);
     }
-    this.sockets.delete(socket.id);
+    this.sockets.sockets.delete(socket.id);
   }
 }
 
